@@ -89,8 +89,6 @@ class Simulation(object):
 
         psrs = []
         for p in self.libs_psrs:
-            print(p)
-
             psr = Pulsar(p, ephem=self.ephem, **kwarg)
 
             ### Check first toa ####
@@ -231,6 +229,9 @@ def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', componen
         30 sampling frequencies. Available PSDs are
         ['powerlaw', 'turnover' 'spectrum']
         2. Optional physical ephemeris modeling.
+    :param gammas:
+        The powerlaw index for the different gwbs searched over.
+        Dictates how many backgrounds are searched over
     :param psd:
         PSD to use for common red noise signal. Available options
         are ['powerlaw', 'turnover' 'spectrum']. 'powerlaw' is default
@@ -263,23 +264,24 @@ def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', componen
 
     # common red noise block
     for idx,gamma in enumerate(gammas):
-        label_gw_A = 'gw_log10_A_{}%'.format(idx+1)
-        label_gw_gamma = 'gw_gamma_{}%'.format(idx+1)
-        print(label_gw_A,label_gw_gamma)
+        label_gw_A = 'gw_log10_A_{}'.format(idx+1)
+        label_gw_gamma = 'gw_gamma_{}'.format(idx+1)
+        label_background = 'background_{}'.format(idx+1)
+        print(label_gw_A,label_gw_gamma,label_background)
 
         if upper_limit:
-            log10_A_gw = parameter.LinearExp(-18,-12)(label_gw)
+            log10_A_gw = parameter.LinearExp(-18,-12)(label_gw_A)
         else:
-            log10_A_gw = parameter.Uniform(-18,-12)(label_gw)
+            log10_A_gw = parameter.Uniform(-18,-12)(label_gw_A)
 
         gamma_gw = parameter.Constant(gamma)(label_gw_gamma)
 
         pl = signal_base.Function(utils.powerlaw, log10_A=log10_A_gw,
                                   gamma=gamma_gw)
         if freqs is None:
-            gw = gp_signals.FourierBasisGP(spectrum=pl, components=30, Tspan=Tspan)
+            gw = gp_signals.FourierBasisGP(spectrum=pl, components=30, Tspan=Tspan, name=label_background)
         else:
-            gw = gp_signals.FourierBasisGP(spectrum=pl, modes=freqs)
+            gw = gp_signals.FourierBasisGP(spectrum=pl, modes=freqs, name=label_background)
 
         model += gw
 
