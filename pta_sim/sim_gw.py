@@ -214,7 +214,7 @@ def model_simple(psrs, psd='powerlaw', components=30, freqs=None,
     return pta
 
 def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', components=30, freqs=None,
-                 gamma_common=None, upper_limit=False, bayesephem=False,
+                 upper_limit=False, bayesephem=False,
                  select='backend', red_noise=False, Tspan=None):
     """
     Reads in list of enterprise Pulsar instance and returns a PTA
@@ -236,9 +236,6 @@ def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', componen
         PSD to use for common red noise signal. Available options
         are ['powerlaw', 'turnover' 'spectrum']. 'powerlaw' is default
         value.
-    :param gamma_common:
-        Fixed common red process spectral index value. By default we
-        vary the spectral index over the range [0, 7].
     :param upper_limit:
         Perform upper limit on common red noise amplitude. By default
         this is set to False. Note that when performing upper limits it
@@ -267,7 +264,6 @@ def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', componen
         label_gw_A = 'gw_log10_A_{}'.format(idx+1)
         label_gw_gamma = 'gw_gamma_{}'.format(idx+1)
         label_background = 'background_{}'.format(idx+1)
-        print(label_gw_A,label_gw_gamma,label_background)
 
         if upper_limit:
             log10_A_gw = parameter.LinearExp(-18,-12)(label_gw_A)
