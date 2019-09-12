@@ -266,36 +266,50 @@ def model_simple(psrs, psd='powerlaw', components=30, freqs=None,
 
     return pta
 
-def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', components=30, freqs=None,
-                 upper_limit=False, bayesephem=False,
-                 select='backend', red_noise=False, Tspan=None):
-    """
-    Reads in list of enterprise Pulsar instance and returns a PTA
-    instantiated with the most simple model allowable for enterprise:
-    per pulsar:
-        1. fixed EFAC per backend/receiver system at 1.0
-        2. Linear timing model.
-        3. Red noise modeled as a power-law with
-            30 sampling frequencies. Default=False
-    global:
-        1.Common red noise modeled with user defined PSD with
-        30 sampling frequencies. Available PSDs are
-        ['powerlaw', 'turnover' 'spectrum']
-        2. Optional physical ephemeris modeling.
-    :param gammas:
-        The powerlaw index for the different gwbs searched over.
-        Dictates how many backgrounds are searched over
-    :param psd:
-        PSD to use for common red noise signal. Available options
-        are ['powerlaw', 'turnover' 'spectrum']. 'powerlaw' is default
-        value.
-    :param upper_limit:
+def create_pta_analysis(psrs, gammas = None, psd='powerlaw', components=30, freqs=None,
+                 upper_limit=False, bayesephem=False, select='backend',
+                 white_noise=None, red_noise=False, Tspan=None,orf=None):
+    """Generates PTA for various analysis models in enterprise
+
+    Parameters
+    ----------
+    psrs : list
+        A list of enterprise Pulsar instance
+
+    gammas : array-like, optional
+        An array of background powerlaw index, dictates how many backgrounds are searched over
+        Default is None, If None, then uses a varied gamma search
+    psd : str, {'powerlaw', 'turnover' 'spectrum'}
+        the power spectral density to use for common red noise signal.
+    components : int, optional
+        Number of sample frequencies
+    freqs : array-like, optional
+        frequencies at which to inject the background
+    upper_limit : bool, optional
         Perform upper limit on common red noise amplitude. By default
         this is set to False. Note that when performing upper limits it
         is recommended that the spectral index also be fixed to a specific
         value.
-    :param bayesephem:
+    bayesephem : bool, optional
         Include BayesEphem model. Set to False by default
+    select : str, {'backend','other'}
+        'backend' separates noise per backend/receiver system
+        'other' sets no selections
+    white_noise : str, optional
+        Includes fixed white noise parameters if set to filepath (ie. '/path/to/file/filename.json')
+        If None, sets a fixed EFAC per backend/receiver system at 1.0
+    red_noise : bool, optional
+        Includes search over pulsar red noise parameters
+    Tspan : float, optional
+        The maximum observation time span to set GW frequency sampling
+    orf : str, {None,'hd','dipole','monopole'}
+        Sets which overlap reduction function to use. By default we do not use any spatial correlations.
+
+    Returns
+    -------
+    pta : obj
+        An instantiated enterprise pta
+
     """
 
     amp_prior = 'uniform' if upper_limit else 'log-uniform'
@@ -307,36 +321,41 @@ def model_simple_multiple_gwbs(psrs, gammas = [13./3.], psd='powerlaw', componen
     # timing model
     model = gp_signals.TimingModel()
 
-    #Only White Noise is EFAC set to 1.0
-    selection = selections.Selection(selections.by_backend)
-    efac = parameter.Constant(1.00)
-    model += white_signals.MeasurementNoise(efac=efac, selection=selection)
+    if select is 'backend':
+        selection = selections.Selection(selections.by_backend)
+    else:
+        selection = selections.Selection(selections.no_selection)
+
+    if white_noise == None:
+        #Only White Noise is EFAC set to 1.0
+        efac = parameter.Constant(1.00)
+        model += white_signals.MeasurementNoise(efac=efac, selection=selection)
+    else:
+        #Set White Noise to file values
+        model += models.white_noise_block(select=select)
 
     # common red noise block
-    for idx,gamma in enumerate(gammas):
-        label_gw_A = 'gw_log10_A_{}'.format(idx+1)
-        label_gw_gamma = 'gw_gamma_{}'.format(idx+1)
-        label_background = 'background_{}'.format(idx+1)
+    if gammas != None:
+        #Fixed gamma
+        for idx,gamma in enumerate(gammas):
+            label = 'gw_{}'.format(idx+1)
 
-        if upper_limit:
-            log10_A_gw = parameter.LinearExp(-18,-12)(label_gw_A)
-        else:
-            log10_A_gw = parameter.Uniform(-18,-12)(label_gw_A)
-
-        gamma_gw = parameter.Constant(gamma)(label_gw_gamma)
-
-        pl = signal_base.Function(utils.powerlaw, log10_A=log10_A_gw,
-                                  gamma=gamma_gw)
-        if freqs is None:
-            gw = gp_signals.FourierBasisGP(spectrum=pl, components=30, Tspan=Tspan, name=label_background)
-        else:
-            gw = gp_signals.FourierBasisGP(spectrum=pl, modes=freqs, name=label_background)
-
-        model += gw
+            if freqs is None:
+                gw = models.common_red_noise_block(psd=psd, prior=amp_prior,
+                                   Tspan=Tspan, gamma_val=gamma, name=label,orf=orf)
+            else:
+                gw = models.common_red_noise_block(psd=psd, prior=amp_prior,
+                                   Tspan=Tspan, gamma_val=gamma, name=label,orf=orf,modes=freqs)
+    else:
+        #Varied gamma and amplitude
+        gw = models.common_red_noise_block(psd=psd, prior=amp_prior,
+                                   Tspan=Tspan, gamma_val=None, name='gw',orf=orf)
+        
+    model += gw
 
     if red_noise:
         # red noise
-        model += models.red_noise_block(prior=amp_prior, Tspan=Tspan,
+        model += models.red_noise_block(psd=psd,prior=amp_prior, Tspan=Tspan,
                                         components=components)
 
     # ephemeris model
