@@ -67,11 +67,64 @@ class Simulation(object):
         self.toa_cuts = [self.last_toa]
         self.gwb_added = False
 
+    def add_white_noise(self,noisedict,efac=True,equad=True,ecorr=False):
+        """add white noise using libstempo
+    
+        Parameters
+        ----------
+        noisedict : dict
+            the noise dictionary containing the white noise values of the pulsars
+        efac : bool, optional
+            Turns on efac loading from noisedict
+        equad : bool, optional
+            Turns on equad loading from noisedict
+        ecorr : bool, optional
+            Turns on ecorr loading from noisedict
 
-    def createGWB(self, A_gwb, gamma_gw= 13./3, seed=None, fit=None):
-        """Great GWB using libstempo.toasim"""
+        """
+        for p in self.libs_psrs:
+            ## make ideal
+            LT.make_ideal(p)
+
+            if efac:
+                ## add efacs
+                LT.add_efac(p, efac = noise_dict[p.name]['efacs'][:,1], 
+                            flagid = 'f', flags = noise_dict[p.name]['efacs'][:,0], 
+                            seed = seed_efac + ii)
+
+            if equad:
+                ## add equads
+                LT.add_equad(p, equad = noise_dict[p.name]['equads'][:,1], 
+                             flagid = 'f', flags = noise_dict[p.name]['equads'][:,0], 
+                             seed = seed_equad + ii)
+
+            if ecorr:
+                ## add jitter
+                try: #Only NANOGrav Pulsars have ECORR
+                    LT.add_jitter(p, ecorr = noise_dict[p.name]['ecorrs'][:,1], 
+                                  flagid='f', flags = noise_dict[p.name]['ecorrs'][:,0], 
+                                  coarsegrain = 1.0/86400.0, seed=seed_jitter + ii)
+                except KeyError:
+                    pass
+
+    def add_red_noise(self,noisedict):
+        """add red noise using libstempo
+    
+        Parameters
+        ----------
+        noisedict : dict
+            the noise dictionary containing the white noise values of the pulsars
+
+        """
+        for p in self.libs_psrs:
+            LT.add_rednoise(p, noise_dict[p.name]['RN_Amp'], noise_dict[p.name]['RN_gamma'], 
+                            components = 30, seed = seed_red + ii)
+
+
+    def createGWB(self, A_gwb, gamma_gw= 13./3, seed=None, fit=None, noCorr=False):
+        """create GWB using libstempo.toasim"""
         if A_gwb!=0:
-            LT.createGWB(self.libs_psrs, A_gwb, gamma_gw, seed=seed)
+            LT.createGWB(self.libs_psrs, A_gwb, gamma_gw, seed=seed, noCorr=noCorr)
             # Fit libstempo psr
             if fit is not None:
                 for psr in self.libs_psrs:
