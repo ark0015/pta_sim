@@ -68,10 +68,10 @@ class Simulation(object):
         self.gwb_added = False
 
 
-    def createGWB(self, A_gwb, gamma_gw= 13./3, seed=None, fit=None):
+    def createGWB(self, A_gwb, gamma_gw= 13./3, seed=None, fit=None, noCorr=False):
         """Great GWB using libstempo.toasim"""
         if A_gwb!=0:
-            LT.createGWB(self.libs_psrs, A_gwb, gamma_gw, seed=seed)
+            LT.createGWB(self.libs_psrs, A_gwb, gamma_gw, seed=seed, noCorr=noCorr)
             # Fit libstempo psr
             if fit is not None:
                 for psr in self.libs_psrs:
