@@ -22,7 +22,7 @@ def load_noise_files(noisedir=None, psr_list=None, noisepath=None):
         List of pulsar to choose which files from `noisedir` to load.
 
     noisepath : str
-        Path to single pulsar niose file.
+        Path to single pulsar noise file.
 
     Returns
     -------
@@ -93,3 +93,49 @@ def get_noise(par, psr, noisedict, return_dict=False):
         return dict(zip(flags, vals))
     else:
         return flags, vals
+
+def get_noise_from_file(noisefile):
+    """Gets noise parameters from file that is in a list and
+    converts it to a dictionary of parameters
+
+    Parameters
+    ----------
+    noisefile : str
+        The location of the particular noisefile to convert, (ie. '/path/to/file/psrname_rest_of_filename.txt')
+
+    Returns
+    -------
+    params : dict
+        The dictionary of parameters corresponding to the particular pulsar
+
+    """
+    psrname = noisefile.split('/')[-1].split('_noise.txt')[0]
+    fin = open(noisefile, 'r')
+    lines = fin.readlines()
+    params = {}
+    for line in lines:
+        ln = line.split()
+        if 'efac' in line:
+            par = 'efac'
+            flag = ln[0].split('efac-')[-1]
+        elif 'equad' in line:
+            par = 'log10_equad'
+            flag = ln[0].split('equad-')[-1]
+        elif 'jitter_q' in line:
+            par = 'log10_ecorr'
+            flag = ln[0].split('jitter_q-')[-1]
+        elif 'RN-Amplitude' in line:
+            par = 'red_noise_log10_A'
+            flag = ''
+        elif 'RN-spectral-index' in line:
+            par = 'red_noise_gamma'
+            flag = ''
+        else:
+            break
+        if flag:
+            name = [psrname, flag, par]
+        else:
+            name = [psrname, par]
+        pname = '_'.join(name)
+        params.update({pname: float(ln[1])})
+    return params
