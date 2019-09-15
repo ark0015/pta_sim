@@ -67,7 +67,8 @@ class Simulation(object):
         self.toa_cuts = [self.last_toa]
         self.gwb_added = False
 
-    def add_white_noise(self,noisedict,efac=True,equad=True,ecorr=False):
+    def add_white_noise(self,noisedict,efac=True,seed_efac=None,equad=True,seed_equad=None,
+                        ecorr=False,seed_ecorr=None):
         """add white noise using libstempo
     
         Parameters
@@ -80,49 +81,76 @@ class Simulation(object):
             Turns on equad loading from noisedict
         ecorr : bool, optional
             Turns on ecorr loading from noisedict
+        seed_efac : int, optional
+            seed for efac pseudorandom-number-generator, if assigned, we can replicate the injection
+        seed_equad : int, optional
+            seed for equad pseudorandom-number-generator, if assigned, we can replicate the injection
+        seed_ecorr : int, optional
+            seed for ecorr pseudorandom-number-generator, if assigned, we can replicate the injection
 
         """
-        for p in self.libs_psrs:
-            ## make ideal
-            LT.make_ideal(p)
+        for ii,p in enumerate(self.libs_psrs):
+            if p.name in noisedict:
+                ## make ideal
+                LT.make_ideal(p)
 
-            if efac:
-                ## add efacs
-                LT.add_efac(p, efac = noise_dict[p.name]['efacs'][:,1], 
-                            flagid = 'f', flags = noise_dict[p.name]['efacs'][:,0], 
-                            seed = seed_efac + ii)
+                if efac:
+                    if seed_efac != None:
+                        seed_efac += ii
+                    ## add efacs
+                    LT.add_efac(p, efac=noisedict[p.name]['efac'],seed=seed_efac)
 
-            if equad:
-                ## add equads
-                LT.add_equad(p, equad = noise_dict[p.name]['equads'][:,1], 
-                             flagid = 'f', flags = noise_dict[p.name]['equads'][:,0], 
-                             seed = seed_equad + ii)
+                if equad:
+                    if seed_equad != None:
+                        seed_equad += ii
+                    ## add equads
+                    LT.add_equad(p, equad=noisedict[p.name]['equad'],seed=seed_equad)
 
-            if ecorr:
-                ## add jitter
-                try: #Only NANOGrav Pulsars have ECORR
-                    LT.add_jitter(p, ecorr = noise_dict[p.name]['ecorrs'][:,1], 
-                                  flagid='f', flags = noise_dict[p.name]['ecorrs'][:,0], 
-                                  coarsegrain = 1.0/86400.0, seed=seed_jitter + ii)
-                except KeyError:
-                    pass
+                if ecorr:
+                    if seed_ecorr != None:
+                        seed_ecorr += ii
+                    ## add jitter
+                    try: #Only NANOGrav Pulsars have ECORR
+                        LT.add_jitter(p, ecorr = noisedict[p.name]['ecorr'],  
+                                      coarsegrain = 1.0/86400.0, seed=seed_jitter)
+                    except KeyError:
+                        pass
+            else:
+                print(p.name,' is not in noisedict')
 
-    def add_red_noise(self,noisedict):
+    def add_red_noise(self,noisedict,seed=None):
         """add red noise using libstempo
     
         Parameters
         ----------
         noisedict : dict
             the noise dictionary containing the white noise values of the pulsars
-
+        seed : int, optional
+            seed for pseudorandom-number-generator, if assigned, we can replicate the injection
+        
         """
         for p in self.libs_psrs:
-            LT.add_rednoise(p, noise_dict[p.name]['RN_Amp'], noise_dict[p.name]['RN_gamma'], 
-                            components = 30, seed = seed_red + ii)
+            LT.add_rednoise(p, noisedict[p.name]['RN_Amp'], noisedict[p.name]['RN_gamma'], 
+                            components=30, seed=seed)
 
 
     def createGWB(self, A_gwb, gamma_gw= 13./3, seed=None, fit=None, noCorr=False):
-        """create GWB using libstempo.toasim"""
+        """create GWB using libstempo.toasim
+        
+        Parameters
+        ----------
+        A_gwb : float
+            Amplitude of the gravitational wave background
+        gamma_gw : float
+            Power law spectrum of the GWB
+        seed : int, optional
+            seed for pseudorandom-number-generator, if assigned, we can replicate the injection
+        fit : int, optional
+            Number of refits with libstempo
+        noCorr : bool, optional
+            Inject correlated signal, default is no
+
+        """
         if A_gwb!=0:
             LT.createGWB(self.libs_psrs, A_gwb, gamma_gw, seed=seed, noCorr=noCorr)
             # Fit libstempo psr

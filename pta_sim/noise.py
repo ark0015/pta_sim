@@ -139,3 +139,45 @@ def get_noise_from_file(noisefile):
         pname = '_'.join(name)
         params.update({pname: float(ln[1])})
     return params
+
+def handle_noise_parameters(noisedict):
+    '''
+    Function to retrieve noise parameters from
+    mdc-style noise dictionary.
+
+    Parameters
+    ----------
+    noisedict : dict,
+        noise dictionary for parameters
+
+    Returns
+    -------
+
+    flags : list
+        List of flags use for given noise parameter. If no selection used
+        then returns parameter name.
+
+    values : list
+        List of noise values from dictionary corresponding to flags above.
+
+    Optionally returns a dictionary where flags are the keys.
+    '''
+    params = {}
+    for psr,subnoisedict in noisedict.items():
+        for param,val in subnoisedict.items():
+            if 'efac' in param:
+                par = 'efac'
+            elif 'equad' in param:
+                par = 'log10_equad'
+            elif 'jitter_q' in param:
+                par = 'log10_ecorr'
+            elif 'rn_log10_A' in param:
+                par = 'red_noise_log10_A'
+            elif 'rn_spec_ind' in param:
+                par = 'red_noise_gamma'
+            else:
+                break
+            name = [psr, par]
+            pname = '_'.join(name)
+            params.update({pname: val})
+    return params
