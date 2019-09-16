@@ -91,6 +91,8 @@ class Simulation(object):
         """
         for ii,p in enumerate(self.libs_psrs):
             if p.name in noisedict:
+                print(p.name)
+                print(noisedict[p.name])
                 ## make ideal
                 LT.make_ideal(p)
 
