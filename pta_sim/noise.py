@@ -94,7 +94,7 @@ def get_noise(par, psr, noisedict, return_dict=False):
     else:
         return flags, vals
 
-def get_noise_from_file(noisefile):
+def get_noise_from_file(noisefile,ecorr_switch=False):
     """Gets noise parameters from file that is in a list and
     converts it to a dictionary of parameters
 
@@ -124,6 +124,8 @@ def get_noise_from_file(noisefile):
         elif 'jitter_q' in line:
             par = 'log10_ecorr'
             flag = ln[0].split('jitter_q-')[-1]
+            if ecorr_switch:
+                flag = 'basis_ecorr_' + flag
         elif 'RN-Amplitude' in line:
             par = 'red_noise_log10_A'
             flag = ''
@@ -138,6 +140,34 @@ def get_noise_from_file(noisefile):
             name = [psrname, par]
         pname = '_'.join(name)
         params.update({pname: float(ln[1])})
+    return params
+
+def get_noise_from_file_dict(noisefile,ecorr_switch=False):
+    """Gets noise parameters from file that is in a dictionary, but with the wrong key and
+    converts it to a dictionary of parameters with the correct ones
+
+    Parameters
+    ----------
+    noisefile : str
+        The location of the particular noisefile to convert, (ie. '/path/to/file/psrname_rest_of_filename.txt')
+
+    Returns
+    -------
+    params : dict
+        The dictionary of parameters corresponding to the particular pulsar
+
+    """
+    noisedict = {}
+    with open(noisefile, 'r') as fin:
+        noisedict.update(json.load(fin))
+    params = {}
+    for key,val in noisedict.items():
+        split_key = key.split('_')
+        if 'ecorr' in split_key and ecorr_switch:
+            new_key = split_key[0] + '_basis_ecorr_' + ('_').join(split_key[1:])
+            params.update({new_key: val})
+        else:
+            params.update({key: val})
     return params
 
 def handle_noise_parameters(noisedict):

@@ -377,7 +377,7 @@ def create_pta_analysis(psrs, gammas = None, psd='powerlaw', components=30, freq
                 gw = models.common_red_noise_block(psd=psd, prior=amp_prior,
                                    Tspan=Tspan, gamma_val=gamma, name=label,orf=orf,modes=freqs)
     else:
-        #Varied gamma and amplitude
+        #Varied gamma [0,7] and amplitude
         gw = models.common_red_noise_block(psd=psd, prior=amp_prior,
                                    Tspan=Tspan, gamma_val=None, name='gw',orf=orf)
         
